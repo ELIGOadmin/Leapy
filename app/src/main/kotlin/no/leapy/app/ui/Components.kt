@@ -1,7 +1,9 @@
 package no.leapy.app.ui
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -59,19 +61,31 @@ fun DetailPage(title: String, onBack: () -> Unit, content: @Composable ColumnSco
     }
 }
 
-/** Round, label-free quick action (Tesla style). Shows a spinner while the car is working on it. */
+/**
+ * Round quick action (Tesla style). Shows a spinner while the car is working on it.
+ * [caption] is a short state text under the icon; [onLongClick] starts editing the row.
+ */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun QuickAction(icon: ImageVector, description: String, active: Boolean = false, busy: Boolean = false, onClick: () -> Unit) {
+fun QuickAction(
+    icon: ImageVector, description: String, active: Boolean = false, busy: Boolean = false,
+    caption: String? = null, enabled: Boolean = true, onLongClick: (() -> Unit)? = null, onClick: () -> Unit,
+) {
     val haptic = LocalHapticFeedback.current
     val tint by animateColorAsState(if (active) C.Accent else C.On, label = "tint")
-    Box(
-        Modifier.size(56.dp).clip(CircleShape).clickable(enabled = !busy) {
-            haptic.performHapticFeedback(HapticFeedbackType.LongPress); onClick()
-        },
-        contentAlignment = Alignment.Center,
-    ) {
-        if (busy) CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp, color = C.Sub)
-        else Icon(icon, contentDescription = description, tint = tint, modifier = Modifier.size(27.dp))
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            Modifier.size(56.dp).clip(CircleShape).combinedClickable(
+                enabled = enabled && !busy,
+                onLongClick = onLongClick?.let { l -> { haptic.performHapticFeedback(HapticFeedbackType.LongPress); l() } },
+                onClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onClick() },
+            ),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (busy) CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp, color = C.Sub)
+            else Icon(icon, contentDescription = description, tint = tint, modifier = Modifier.size(27.dp))
+        }
+        Text(caption ?: "", fontSize = 11.sp, color = C.Sub, maxLines = 1, modifier = Modifier.height(15.dp))
     }
 }
 
@@ -199,3 +213,32 @@ fun ago(millis: Long?): String {
 }
 
 fun hm(minutes: Int) = if (minutes >= 60) "${minutes / 60} t ${minutes % 60} m" else "$minutes min"
+
+/** Square-ish control tile: icon on top, label and state below. */
+@Composable
+fun Tile(icon: ImageVector, label: String, value: String?, active: Boolean = false, busy: Boolean = false, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Column(
+        modifier.clip(RoundedCornerShape(18.dp)).background(C.Card).clickable(enabled = !busy, onClick = onClick).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Box(Modifier.size(28.dp), contentAlignment = Alignment.CenterStart) {
+            if (busy) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp, color = C.Sub)
+            else Icon(icon, contentDescription = null, tint = if (active) C.Accent else C.On, modifier = Modifier.size(28.dp))
+        }
+        Column {
+            Text(label, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = C.On, maxLines = 1)
+            Text(value ?: " ", fontSize = 13.sp, color = if (active) C.Accent else C.Sub, maxLines = 1)
+        }
+    }
+}
+
+/** Two tiles side by side. */
+@Composable
+fun TileRow(content: @Composable RowScope.() -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), content = content)
+}
+
+private val stampFormat = java.text.SimpleDateFormat("dd.MM.yyyy HH:mm:ss", java.util.Locale("nb", "NO"))
+
+/** Full date and time with seconds, e.g. 04.11.2026 21:03:51. */
+fun stamp(millis: Long?): String = millis?.let { synchronized(stampFormat) { stampFormat.format(java.util.Date(it)) } } ?: "–"

@@ -36,13 +36,18 @@ data class UiState(
     val climateTemp: Int = 21,
     val hasPin: Boolean = false,
     val carImage: CarImagePackage? = null,
+    /** The quick actions on the home screen, in order. Kept across logins. */
+    val quickItems: List<String> = emptyList(),
 )
 
 class CarViewModel(app: Application) : AndroidViewModel(app) {
     private val store = SecureStore(app)
     private var client: LeapmotorClient? = null
 
-    private val _state = MutableStateFlow(UiState(climateTemp = store.lastClimateTemp))
+    private val uiPrefs = app.getSharedPreferences("leapy_ui", android.content.Context.MODE_PRIVATE)
+    private val _state = MutableStateFlow(
+        UiState(climateTemp = store.lastClimateTemp, quickItems = uiPrefs.getString("quick", null)?.split(',')?.filter { it.isNotBlank() } ?: emptyList()),
+    )
     val state: StateFlow<UiState> = _state.asStateFlow()
 
     init {
@@ -78,7 +83,7 @@ class CarViewModel(app: Application) : AndroidViewModel(app) {
         store.clear()
         java.io.File(getApplication<Application>().filesDir, "car").deleteRecursively()
         client = null
-        _state.value = UiState()
+        _state.value = UiState(quickItems = _state.value.quickItems)
     }
 
     fun updatePin(pin: String) {
@@ -188,6 +193,11 @@ class CarViewModel(app: Application) : AndroidViewModel(app) {
                 _state.update { it.copy(busy = null, error = friendly(e)) }
             }
         }
+    }
+
+    fun setQuickItems(items: List<String>) {
+        uiPrefs.edit().putString("quick", items.joinToString(",")).apply()
+        _state.update { it.copy(quickItems = items) }
     }
 
     fun clearMessages() = _state.update { it.copy(message = null, error = null) }

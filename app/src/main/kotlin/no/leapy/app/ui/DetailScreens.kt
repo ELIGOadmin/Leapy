@@ -23,6 +23,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AirlineSeatReclineNormal
 import androidx.compose.material.icons.outlined.ChevronLeft
 import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.LockOpen
+import androidx.compose.material.icons.outlined.SensorDoor
+import androidx.compose.material.icons.outlined.Videocam
+import androidx.compose.material.icons.outlined.WbSunny
 import androidx.compose.material.icons.outlined.PowerSettingsNew
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -112,7 +117,6 @@ fun ClimateScreen(state: UiState, vm: CarViewModel, onBack: () -> Unit) {
             vm.send(if (it) Command.MIRROR_HEAT_ON else Command.MIRROR_HEAT_OFF)
         }
         ActionRow("Hurtigkjøling", "Start", busy = busy == Command.QUICK_COOL.label) { vm.send(Command.QUICK_COOL) }
-        ActionRow("Forvarm batteri", "Start", busy = busy == Command.BATTERY_PREHEAT_ON.label) { vm.send(Command.BATTERY_PREHEAT_ON) }
         Spacer(Modifier.height(32.dp))
     }
 }
@@ -135,96 +139,6 @@ private fun HeatTile(icon: ImageVector, label: String, level: Int, max: Int, mod
         Text(label, fontSize = 13.sp, color = if (on) C.On else C.Sub)
         Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
             repeat(max) { i -> Box(Modifier.size(6.dp).clip(CircleShape).background(if (i < level) C.Heat else C.CardHigh)) }
-        }
-    }
-}
-
-// ---------------------------------------------------------------- Charging
-
-@Composable
-fun ChargeScreen(state: UiState, vm: CarViewModel, onBack: () -> Unit) {
-    val s = state.status
-    val busy = state.busy
-    DetailPage("Lading", onBack) {
-        Row(Modifier.padding(top = 16.dp), verticalAlignment = Alignment.Bottom) {
-            LiveSoc(s, state.lastFetchMillis)
-            s?.rangeKm?.let { Text("$it km", fontSize = 22.sp, color = C.Sub, modifier = Modifier.padding(start = 10.dp, bottom = 12.dp)) }
-        }
-        ChargeBar(s?.soc ?: 0, s?.chargeLimit, s?.isCharging == true)
-        Row(Modifier.fillMaxWidth().padding(top = 6.dp)) {
-            Text(chargeLine(s) ?: "", fontSize = 12.sp, color = C.Sub, modifier = Modifier.weight(1f))
-            s?.chargeLimit?.let { Text("Grense $it %", fontSize = 12.sp, color = C.Sub) }
-        }
-
-        Spacer(Modifier.height(22.dp))
-        val temp = s?.batteryTempC?.let { "$it°" } ?: "–"
-        if (s?.isCharging == true) {
-            StatStrip(
-                (s.chargingPowerKw?.let { "%.1f kW".format(it) } ?: "–") to "Effekt",
-                (s.chargeRemainMin?.takeIf { it > 0 }?.let(::hm) ?: "–") to "Igjen",
-                temp to "Batteri",
-            )
-        } else {
-            StatStrip(
-                (s?.rangeKm?.let { "$it km" } ?: "–") to "Rekkevidde",
-                (if (s?.pluggedIn == true) "Tilkoblet" else "Ikke tilkoblet") to "Kabel",
-                temp to "Batteri",
-            )
-        }
-
-        SectionLabel("Ladegrense")
-        Segmented(listOf(80 to "80 %", 90 to "90 %", 100 to "100 %"), s?.chargeLimit, enabled = busy == null) { vm.setChargeLimit(it) }
-        if (busy?.startsWith("Ladegrense") == true) Text("Lagrer …", color = C.Sub, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
-
-        Spacer(Modifier.height(36.dp))
-        if (s?.isCharging == true) BigButton("Stopp lading", busy = busy == Command.CHARGE_STOP.label) { vm.send(Command.CHARGE_STOP) }
-        else BigButton("Start lading", busy = busy == Command.CHARGE_START.label) { vm.send(Command.CHARGE_START) }
-        Spacer(Modifier.height(10.dp))
-        BigButton("Frigjør ladekabel", primary = false, busy = busy == Command.UNLOCK_CHARGER.label) { vm.send(Command.UNLOCK_CHARGER) }
-        Spacer(Modifier.height(32.dp))
-    }
-}
-
-/**
- * Battery percentage with two decimals that keeps counting up between status updates while
- * charging, estimated from the charging power (like fast-charging phones do).
- */
-@Composable
-private fun LiveSoc(s: CarStatus?, fetchedAt: Long?) {
-    val base = s?.preciseSoc ?: s?.soc?.toDouble()
-    if (s == null || base == null) { Text("–", fontSize = 64.sp, fontWeight = FontWeight.Light, color = C.On); return }
-    val charging = s.isCharging && (s.chargingPowerKw ?: 0.0) > 0
-    if (!charging) {
-        Text("${s.soc ?: base.toInt()} %", fontSize = 64.sp, fontWeight = FontWeight.Light, color = C.On, letterSpacing = (-2).sp)
-        return
-    }
-    val capacityKwh = s.remainingKwh?.takeIf { it > 0 && base > 5 }?.let { it / (base / 100.0) } ?: 69.9
-    val pctPerMs = (s.chargingPowerKw ?: 0.0) / capacityKwh * 100.0 / 3_600_000.0
-    val cap = (s.chargeLimit ?: 100).toDouble()
-    var shown by remember { mutableDoubleStateOf(base) }
-    LaunchedEffect(base, fetchedAt) {
-        val start = fetchedAt ?: System.currentTimeMillis()
-        // Never jump backwards by a small amount; snap only on a real correction.
-        if (base > shown || shown - base > 0.5) shown = base
-        while (true) {
-            val est = (base + pctPerMs * (System.currentTimeMillis() - start)).coerceAtMost(cap)
-            if (est > shown) shown = est
-            delay(100)
-        }
-    }
-    Text("%.2f %%".format(Locale("nb", "NO"), shown), fontSize = 56.sp, fontWeight = FontWeight.Light, color = C.On, letterSpacing = (-1.5).sp)
-}
-
-@Composable
-private fun ChargeBar(soc: Int, limit: Int?, charging: Boolean) {
-    Box(Modifier.fillMaxWidth().padding(top = 14.dp).height(20.dp), contentAlignment = Alignment.CenterStart) {
-        Box(Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp)).background(C.Card))
-        Box(Modifier.fillMaxWidth(soc.coerceIn(0, 100) / 100f).height(10.dp).clip(RoundedCornerShape(5.dp)).background(if (charging) C.Accent else C.On))
-        if (limit != null && limit in 1..100) {
-            Row(Modifier.fillMaxWidth()) {
-                Spacer(Modifier.fillMaxWidth(limit / 100f - 0.004f))
-                Box(Modifier.width(2.dp).fillMaxHeight().clip(RoundedCornerShape(1.dp)).background(Color.White))
-            }
         }
     }
 }
@@ -270,36 +184,50 @@ fun LocationScreen(state: UiState, onBack: () -> Unit) {
 fun SecurityScreen(state: UiState, vm: CarViewModel, confirmer: Confirmer, onBack: () -> Unit) {
     val s = state.status
     val busy = state.busy
+    fun busyWith(vararg c: Command) = c.any { it.label == busy }
+    val tailgate = ImageVector.vectorResource(R.drawable.ic_tailgate)
+    val window = ImageVector.vectorResource(R.drawable.ic_window)
     DetailPage("Sikkerhet", onBack) {
-        Spacer(Modifier.height(8.dp))
-        SwitchRow("Låst", s?.locked, busy = busy == Command.LOCK.label || busy == Command.UNLOCK.label) {
-            if (it) vm.send(Command.LOCK) else confirmer.confirm(Command.UNLOCK.label) { vm.send(Command.UNLOCK) }
+        Spacer(Modifier.height(12.dp))
+        val locked = s?.locked != false
+        TileRow {
+            Tile(if (locked) Icons.Outlined.Lock else Icons.Outlined.LockOpen, "Lås", when (s?.locked) { true -> "Låst"; false -> "Åpen"; null -> null },
+                active = s?.locked == true, busy = busyWith(Command.LOCK, Command.UNLOCK), modifier = Modifier.weight(1f)) {
+                if (locked) confirmer.confirm(Command.UNLOCK.label) { vm.send(Command.UNLOCK) } else vm.send(Command.LOCK)
+            }
+            Tile(Icons.Outlined.Videocam, "Vaktmodus", when (s?.sentryMode) { true -> "På"; false -> "Av"; null -> null },
+                active = s?.sentryMode == true, busy = busyWith(Command.SENTRY_ON, Command.SENTRY_OFF), modifier = Modifier.weight(1f)) {
+                vm.send(if (s?.sentryMode == true) Command.SENTRY_OFF else Command.SENTRY_ON)
+            }
         }
-        SwitchRow("Vaktmodus", s?.sentryMode, busy = busy == Command.SENTRY_ON.label || busy == Command.SENTRY_OFF.label) {
-            vm.send(if (it) Command.SENTRY_ON else Command.SENTRY_OFF)
+        val windowsOpen = s?.windowsOpen?.isNotEmpty() == true
+        TileRow {
+            Tile(window, "Vinduer", s?.let { if (windowsOpen) "Åpne" else "Lukket" }, active = windowsOpen,
+                busy = busyWith(Command.WINDOWS_OPEN, Command.WINDOWS_CLOSE), modifier = Modifier.weight(1f)) {
+                if (windowsOpen) vm.send(Command.WINDOWS_CLOSE) else confirmer.confirm(Command.WINDOWS_OPEN.label) { vm.send(Command.WINDOWS_OPEN) }
+            }
+            Tile(tailgate, "Bakluke", s?.let { if (it.tailgateOpen) "Åpen" else "Lukket" }, active = s?.tailgateOpen == true,
+                busy = busyWith(Command.TRUNK_OPEN, Command.TRUNK_CLOSE), modifier = Modifier.weight(1f)) {
+                if (s?.tailgateOpen == true) vm.send(Command.TRUNK_CLOSE) else confirmer.confirm(Command.TRUNK_OPEN.label) { vm.send(Command.TRUNK_OPEN) }
+            }
         }
-        SectionLabel("Status")
-        StatusLine("Dører", s?.doorsOpen?.let { if (it.isEmpty()) "Lukket" else it.joinToString() })
-        StatusLine("Vinduer", s?.windowsOpen?.let { if (it.isEmpty()) "Lukket" else it.joinToString() })
-        StatusLine("Bakluke", s?.let { if (it.tailgateOpen) "Åpen" else "Lukket" })
+        TileRow {
+            Tile(Icons.Outlined.WbSunny, "Solskjerm", "Åpne", busy = busyWith(Command.SUNSHADE_OPEN), modifier = Modifier.weight(1f)) { vm.send(Command.SUNSHADE_OPEN) }
+            Tile(Icons.Outlined.WbSunny, "Solskjerm", "Lukk", busy = busyWith(Command.SUNSHADE_CLOSE), modifier = Modifier.weight(1f)) { vm.send(Command.SUNSHADE_CLOSE) }
+        }
 
-        SectionLabel("Vinduer")
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(Modifier.weight(1f)) { BigButton("Åpne", primary = false, busy = busy == Command.WINDOWS_OPEN.label) { confirmer.confirm(Command.WINDOWS_OPEN.label) { vm.send(Command.WINDOWS_OPEN) } } }
-            Box(Modifier.weight(1f)) { BigButton("Lukk", primary = false, busy = busy == Command.WINDOWS_CLOSE.label) { vm.send(Command.WINDOWS_CLOSE) } }
-        }
-        SectionLabel("Solskjerm")
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(Modifier.weight(1f)) { BigButton("Åpne", primary = false, busy = busy == Command.SUNSHADE_OPEN.label) { vm.send(Command.SUNSHADE_OPEN) } }
-            Box(Modifier.weight(1f)) { BigButton("Lukk", primary = false, busy = busy == Command.SUNSHADE_CLOSE.label) { vm.send(Command.SUNSHADE_CLOSE) } }
-        }
+        SectionLabel("Status")
+        StatusLine(Icons.Outlined.SensorDoor, "Dører", s?.doorsOpen?.let { if (it.isEmpty()) "Lukket" else it.joinToString() })
+        StatusLine(window, "Vinduer", s?.windowsOpen?.let { if (it.isEmpty()) "Lukket" else it.joinToString() })
+        StatusLine(tailgate, "Bakluke", s?.let { if (it.tailgateOpen) "Åpen" else "Lukket" })
         Spacer(Modifier.height(32.dp))
     }
 }
 
 @Composable
-private fun StatusLine(label: String, value: String?) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+private fun StatusLine(icon: ImageVector?, label: String, value: String?) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (icon != null) { Icon(icon, null, tint = C.Sub, modifier = Modifier.size(22.dp)); Spacer(Modifier.width(14.dp)) }
         Text(label, color = C.Sub, fontSize = 15.sp, modifier = Modifier.weight(1f))
         Text(value ?: "–", color = C.On, fontSize = 15.sp)
     }
@@ -308,8 +236,9 @@ private fun StatusLine(label: String, value: String?) {
 // ---------------------------------------------------------------- Car
 
 @Composable
-fun CarScreen(state: UiState, onBack: () -> Unit) {
+fun CarScreen(state: UiState, vm: CarViewModel, onBack: () -> Unit) {
     val s = state.status
+    val busy = state.busy
     DetailPage("Bil", onBack) {
         Spacer(Modifier.height(12.dp))
         StatStrip(
@@ -317,6 +246,12 @@ fun CarScreen(state: UiState, onBack: () -> Unit) {
             (s?.batteryTempC?.let { "$it°" } ?: "–") to "Batteri",
             (s?.interiorTemp?.let { "${fmt1(it)}°" } ?: "–") to "Inne",
         )
+        SectionLabel("Batteri")
+        val heat = ImageVector.vectorResource(R.drawable.ic_battery_heat)
+        TileRow {
+            Tile(heat, "Forvarm batteri", "Start", busy = busy == Command.BATTERY_PREHEAT_ON.label, modifier = Modifier.weight(1f)) { vm.send(Command.BATTERY_PREHEAT_ON) }
+            Tile(heat, "Forvarm batteri", "Stopp", busy = busy == Command.BATTERY_PREHEAT_OFF.label, modifier = Modifier.weight(1f)) { vm.send(Command.BATTERY_PREHEAT_OFF) }
+        }
         SectionLabel("Dekktrykk (bar)")
         val t = s?.tires
         fun bar(k: Int?) = k?.let { "%.1f".format(Locale("nb", "NO"), it / 100.0) } ?: "–"
@@ -326,10 +261,11 @@ fun CarScreen(state: UiState, onBack: () -> Unit) {
         }
         if (t?.allOk == false) Text("Sjekk dekktrykket", color = C.Warn, modifier = Modifier.padding(top = 10.dp))
         SectionLabel("Bil")
-        StatusLine("Modell", state.vehicle?.carType?.uppercase())
-        StatusLine("Skilt", state.vehicle?.plateNumber)
-        StatusLine("VIN", state.vehicle?.vin)
-        StatusLine("Oppdatert", ago(s?.collectedAtMillis ?: state.lastFetchMillis))
+        StatusLine(null, "Modell", state.vehicle?.carType?.uppercase())
+        StatusLine(null, "Skilt", state.vehicle?.plateNumber)
+        StatusLine(null, "VIN", state.vehicle?.vin)
+        StatusLine(null, "Oppdatert", stamp(s?.collectedAtMillis ?: state.lastFetchMillis))
+        Spacer(Modifier.height(32.dp))
     }
 }
 

@@ -45,7 +45,7 @@ class Confirmer(
     }
 }
 
-enum class Page { HOME, CLIMATE, CHARGE, LOCATION, SECURITY, CAR, SETTINGS }
+enum class Page { HOME, CLIMATE, LOCATION, SECURITY, CAR, SETTINGS }
 
 @Composable
 fun LeapyApp(vm: CarViewModel, biometric: (String, () -> Unit) -> Boolean) {
@@ -104,10 +104,9 @@ fun LeapyApp(vm: CarViewModel, biometric: (String, () -> Unit) -> Boolean) {
                 when (p) {
                     Page.HOME -> HomeScreen(state, vm, confirmer, go)
                     Page.CLIMATE -> ClimateScreen(state, vm, back)
-                    Page.CHARGE -> ChargeScreen(state, vm, back)
                     Page.LOCATION -> LocationScreen(state, back)
                     Page.SECURITY -> SecurityScreen(state, vm, confirmer, back)
-                    Page.CAR -> CarScreen(state, back)
+                    Page.CAR -> CarScreen(state, vm, back)
                     Page.SETTINGS -> SettingsScreen(state, vm, back)
                 }
             }
