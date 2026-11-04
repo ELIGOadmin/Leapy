@@ -11,8 +11,8 @@ data class Command(val label: String, val cmdId: String, val content: String, va
 
         val LOCK = Command("Lås", "110", value("lock"))
         val UNLOCK = Command("Lås opp", "110", value("unlock"))
-        val TRUNK_OPEN = Command("Åpne bagasjerom", "130", value("true"))
-        val TRUNK_CLOSE = Command("Lukk bagasjerom", "130", value("false"))
+        val TRUNK_OPEN = Command("Åpne bakluke", "130", value("true"))
+        val TRUNK_CLOSE = Command("Lukk bakluke", "130", value("false"))
         val FIND_CAR = Command("Finn bilen", "120", value("true"))
         val WINDOWS_OPEN = Command("Åpne vinduer", "230", value("100"))
         val WINDOWS_CLOSE = Command("Lukk vinduer", "230", value("0"))

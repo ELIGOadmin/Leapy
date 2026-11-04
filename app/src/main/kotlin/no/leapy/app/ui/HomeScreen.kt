@@ -12,7 +12,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Air
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
-import androidx.compose.material.icons.filled.Luggage
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material.icons.filled.VolumeUp
@@ -24,6 +23,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
+import no.leapy.app.R
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -91,7 +93,7 @@ fun HomeScreen(state: UiState, vm: CarViewModel, confirmer: Confirmer) {
             ActionTile("Avising", Icons.Filled.Air, Modifier.weight(1f), busy = state.busy == Command.DEFROST.label) { vm.send(Command.DEFROST) }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ActionTile("Bagasjerom", Icons.Filled.Luggage, Modifier.weight(1f), busy = state.busy == Command.TRUNK_OPEN.label) { cmd(Command.TRUNK_OPEN) }
+            ActionTile("Bakluke", ImageVector.vectorResource(R.drawable.ic_tailgate), Modifier.weight(1f), busy = state.busy == Command.TRUNK_OPEN.label) { cmd(Command.TRUNK_OPEN) }
             ActionTile("Finn bilen", Icons.Filled.VolumeUp, Modifier.weight(1f), busy = state.busy == Command.FIND_CAR.label) { vm.send(Command.FIND_CAR) }
         }
         if (!state.hasPin) {
