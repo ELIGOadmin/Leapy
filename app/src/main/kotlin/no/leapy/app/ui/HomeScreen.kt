@@ -274,7 +274,7 @@ fun NoCarScreen(onRetry: () -> Unit, onLogout: () -> Unit) {
 
 // ---------------------------------------------------------------- Charging panel
 
-private const val MIN_LIMIT = 50
+private const val MIN_LIMIT = 20
 
 /** Battery %, range, charge bar with a draggable limit, and the charging state. */
 @Composable
