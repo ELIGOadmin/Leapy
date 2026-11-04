@@ -192,7 +192,7 @@ fun ChargeScreen(state: UiState, vm: CarViewModel, onBack: () -> Unit) {
 @Composable
 private fun LiveSoc(s: CarStatus?, fetchedAt: Long?) {
     val base = s?.preciseSoc ?: s?.soc?.toDouble()
-    if (base == null) { Text("–", fontSize = 64.sp, fontWeight = FontWeight.Light, color = C.On); return }
+    if (s == null || base == null) { Text("–", fontSize = 64.sp, fontWeight = FontWeight.Light, color = C.On); return }
     val charging = s.isCharging && (s.chargingPowerKw ?: 0.0) > 0
     if (!charging) {
         Text("${s.soc ?: base.toInt()} %", fontSize = 64.sp, fontWeight = FontWeight.Light, color = C.On, letterSpacing = (-2).sp)
