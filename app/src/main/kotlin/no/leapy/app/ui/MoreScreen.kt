@@ -57,6 +57,13 @@ fun MoreScreen(state: UiState, vm: CarViewModel, confirmer: Confirmer) {
             ActionTile("Åpne solskjerm", Icons.Filled.WbShade, Modifier.weight(1f), busy = state.busy == Command.SUNSHADE_OPEN.label) { vm.send(Command.SUNSHADE_OPEN) }
             ActionTile("Lukk solskjerm", Icons.Filled.WbShade, Modifier.weight(1f), busy = state.busy == Command.SUNSHADE_CLOSE.label) { vm.send(Command.SUNSHADE_CLOSE) }
         }
+        SectionCard("Bluetooth-nøkkel") {
+            Text("Opplåsing med Bluetooth skjer fortsatt i Leapmotor-appen. Hvis den slutter å virke, kan du starte nøkkelen i bilen på nytt herfra.",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            OutlinedButton(onClick = { vm.send(Command.BLE_KEY_RESTART) }, enabled = state.busy == null, modifier = Modifier.fillMaxWidth()) {
+                Text("Start Bluetooth-nøkkel på nytt")
+            }
+        }
         SectionCard("Vaktmodus") {
             ToggleRow("Vaktmodus (kamera)", s?.sentryMode, { vm.send(Command.SENTRY_ON) }, { vm.send(Command.SENTRY_OFF) })
         }

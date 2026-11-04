@@ -29,6 +29,7 @@ data class Command(val label: String, val cmdId: String, val content: String, va
         val MIRROR_HEAT_OFF = Command("Speilvarme av", "440", value("off"))
         val SENTRY_ON = Command("Vaktmodus på", "220", value("1"))
         val SENTRY_OFF = Command("Vaktmodus av", "220", value("0"))
+        val BLE_KEY_RESTART = Command("Start Bluetooth-nøkkel på nytt", "430", value("restart"))
         val AC_OFF = Command("Klima av", "170", buildJsonObject { put("operate", "off") }.toString())
 
         enum class ClimateMode(val api: String) { HEAT("hot"), COOL("cold"), FAN("wind") }
