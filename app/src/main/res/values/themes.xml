@@ -4,6 +4,6 @@
         <item name="android:statusBarColor">@color/leapy_bg</item>
         <item name="android:navigationBarColor">@color/leapy_bg</item>
     </style>
-    <color name="leapy_bg">#0E1420</color>
+    <color name="leapy_bg">#0B0D11</color>
     <color name="leapy_accent">#3DDC97</color>
 </resources>

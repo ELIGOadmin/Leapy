@@ -39,6 +39,14 @@ class CryptoTest {
         assertEquals("65c8aa29034d06bc931ac74f0d8180808fc799bc1e4ce337c85db644880f1952", signer.signed(key, "dev1", mapOf("remoteCtlId" to "RC9"))["sign"])
     }
 
+    @Test fun carPictureHeaders() {
+        assertEquals("7e351529509395deab46bc318c697c82351ef8ccb82018a48a63bd90c4de5e0d",
+            signer.signed(key, "dev1", mapOf("vin" to "LVIN123", "deviceID" to "dev1"))["sign"])
+        val h = signer.picturePackage(key, "dev1", "PK1")
+        assertEquals("1cf30a26cd2c6010f87cba903929d4d911aaf4b20f2ecbab99d45518c26773e1", h["sign"])
+        assertTrue("X-P12_ENC_ALG" !in h)
+    }
+
     @Test fun quoteMatchesPython() = assertEquals("a%20b%2Bc%2Fd~e%2Af%40%C3%B8", Crypto.quote("a b+c/d~e*f@ø"))
 
     @Test fun bundledCertificatesLoad() {
@@ -73,5 +81,6 @@ class StatusTest {
         assertEquals(true, s.acOn); assertEquals(21.5, s.acSetting); assertEquals(2, s.driverSeatHeat)
         assertEquals(true, s.tires.allOk); assertEquals(1700000000000L, s.collectedAtMillis)
         assertTrue(s.doorsOpen.isEmpty())
+        assertEquals(65.0, s.preciseSoc); assertEquals(false, s.tailgateOpen); assertEquals(false, s.driving)
     }
 }

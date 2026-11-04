@@ -1,139 +1,201 @@
 package no.leapy.app.ui
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+/** Scrollable detail page with a back arrow and title. */
 @Composable
-fun SectionCard(title: String? = null, content: @Composable ColumnScope.() -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-    ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (title != null) Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            content()
+fun DetailPage(title: String, onBack: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+    Column(Modifier.fillMaxSize().statusBarsPadding()) {
+        Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 20.dp, top = 8.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(48.dp).clip(CircleShape).clickable(onClick = onBack), contentAlignment = Alignment.Center) {
+                Icon(Icons.Outlined.ArrowBack, contentDescription = "Tilbake", tint = C.On)
+            }
+            Text(title, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = C.On)
         }
-    }
-}
-
-/** Large square-ish button used for the main actions. */
-@Composable
-fun ActionTile(
-    label: String,
-    icon: ImageVector,
-    modifier: Modifier = Modifier,
-    active: Boolean = false,
-    busy: Boolean = false,
-    enabled: Boolean = true,
-    onClick: () -> Unit,
-) {
-    val accent = MaterialTheme.colorScheme.primary
-    OutlinedCard(
-        onClick = onClick,
-        enabled = enabled && !busy,
-        modifier = modifier.height(96.dp),
-        shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(1.dp, if (active) accent else MaterialTheme.colorScheme.surfaceVariant),
-        colors = CardDefaults.outlinedCardColors(
-            containerColor = if (active) accent.copy(alpha = 0.14f) else MaterialTheme.colorScheme.surfaceContainer,
-        ),
-    ) {
         Column(
-            Modifier.fillMaxWidth().padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
+            content = content,
+        )
+    }
+}
+
+/** Round, label-free quick action (Tesla style). Shows a spinner while the car is working on it. */
+@Composable
+fun QuickAction(icon: ImageVector, description: String, active: Boolean = false, busy: Boolean = false, onClick: () -> Unit) {
+    val haptic = LocalHapticFeedback.current
+    val tint by animateColorAsState(if (active) C.Accent else C.On, label = "tint")
+    Box(
+        Modifier.size(56.dp).clip(CircleShape).clickable(enabled = !busy) {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress); onClick()
+        },
+        contentAlignment = Alignment.Center,
+    ) {
+        if (busy) CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp, color = C.Sub)
+        else Icon(icon, contentDescription = description, tint = tint, modifier = Modifier.size(27.dp))
+    }
+}
+
+/** List row: icon, title, live value, chevron. */
+@Composable
+fun NavRow(icon: ImageVector, title: String, value: String?, onClick: () -> Unit) {
+    Column {
+        Box(Modifier.fillMaxWidth().height(1.dp).background(C.Line))
+        Row(
+            Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(Modifier.size(30.dp), contentAlignment = Alignment.Center) {
-                if (busy) CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.5.dp)
-                else Icon(icon, contentDescription = null, tint = if (active) accent else MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(28.dp))
+            Icon(icon, contentDescription = null, tint = C.On, modifier = Modifier.size(24.dp))
+            Spacer(Modifier.width(18.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = C.On)
+                if (!value.isNullOrBlank()) Text(value, fontSize = 13.sp, color = C.Sub, maxLines = 1)
             }
-            Spacer(Modifier.height(8.dp))
-            Text(label, style = MaterialTheme.typography.labelLarge, textAlign = TextAlign.Center, maxLines = 2)
+            Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = C.Faint)
         }
     }
 }
 
-/** Battery ring with percentage and range in the middle. */
+/** Row with a label and a switch. [on] = null means the car does not report the state. */
 @Composable
-fun BatteryRing(soc: Int?, rangeKm: Int?, charging: Boolean, limit: Int?) {
-    val track = MaterialTheme.colorScheme.surfaceVariant
-    val color = when {
-        soc == null -> track
-        soc <= 15 -> Danger
-        soc <= 30 -> Warn
-        else -> MaterialTheme.colorScheme.primary
-    }
-    Box(Modifier.size(200.dp), contentAlignment = Alignment.Center) {
-        Canvas(Modifier.size(200.dp)) {
-            val stroke = 16.dp.toPx()
-            val inset = stroke / 2
-            val arcSize = Size(size.width - stroke, size.height - stroke)
-            drawArc(track, 135f, 270f, false, Offset(inset, inset), arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
-            if (soc != null) drawArc(color, 135f, 270f * soc.coerceIn(0, 100) / 100f, false, Offset(inset, inset), arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
-            if (limit != null && limit in 1..100) {
-                val angle = Math.toRadians((135.0 + 270.0 * limit / 100.0))
-                val r = (size.width - stroke) / 2
-                val c = Offset(size.width / 2, size.height / 2)
-                val p1 = Offset(c.x + (r - stroke) * kotlin.math.cos(angle).toFloat(), c.y + (r - stroke) * kotlin.math.sin(angle).toFloat())
-                val p2 = Offset(c.x + (r + stroke) * kotlin.math.cos(angle).toFloat(), c.y + (r + stroke) * kotlin.math.sin(angle).toFloat())
-                drawLine(Color.White.copy(alpha = 0.8f), p1, p2, strokeWidth = 3.dp.toPx(), cap = StrokeCap.Round)
-            }
-        }
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(soc?.let { "$it %" } ?: "–", fontSize = 44.sp, fontWeight = FontWeight.Bold)
-            Text(rangeKm?.let { "$it km" } ?: "", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (charging) Text("Lader", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+fun SwitchRow(label: String, on: Boolean?, busy: Boolean = false, onChange: (Boolean) -> Unit) {
+    Column {
+        Box(Modifier.fillMaxWidth().height(1.dp).background(C.Line))
+        Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(label, fontSize = 16.sp, color = C.On, modifier = Modifier.weight(1f))
+            if (busy) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = C.Sub)
+            else Switch(
+                checked = on == true, onCheckedChange = onChange,
+                colors = SwitchDefaults.colors(
+                    checkedTrackColor = C.Accent, checkedThumbColor = Color.White,
+                    uncheckedTrackColor = C.CardHigh, uncheckedThumbColor = Color(0xFF9AA1AD), uncheckedBorderColor = Color.Transparent,
+                ),
+            )
         }
     }
 }
 
+/** Row with a label and a small action button, for commands whose state the car does not report. */
 @Composable
-fun InfoRow(label: String, value: String, valueColor: Color = Color.Unspecified) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, fontWeight = FontWeight.Medium, color = valueColor)
+fun ActionRow(label: String, action: String, busy: Boolean = false, onClick: () -> Unit) {
+    Column {
+        Box(Modifier.fillMaxWidth().height(1.dp).background(C.Line))
+        Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(label, fontSize = 16.sp, color = C.On, modifier = Modifier.weight(1f))
+            Box(
+                Modifier.clip(RoundedCornerShape(10.dp)).background(C.CardHigh).clickable(enabled = !busy, onClick = onClick)
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (busy) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = C.Sub)
+                else Text(action, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = C.On)
+            }
+        }
     }
 }
+
+/** Card with values side by side, separated by thin lines. */
+@Composable
+fun StatStrip(vararg stats: Pair<String, String>) {
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(C.Card)) {
+        stats.forEachIndexed { i, (value, label) ->
+            if (i > 0) Box(Modifier.width(1.dp).height(64.dp).padding(vertical = 0.dp).background(C.Line))
+            Column(Modifier.weight(1f).padding(vertical = 14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(value, fontSize = 20.sp, fontWeight = FontWeight.Medium, color = C.On, maxLines = 1)
+                Text(label, fontSize = 12.sp, color = C.Sub)
+            }
+        }
+    }
+}
+
+/** Segmented choice in a pill. */
+@Composable
+fun <T> Segmented(options: List<Pair<T, String>>, selected: T?, enabled: Boolean = true, onSelect: (T) -> Unit) {
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(C.Card).padding(4.dp)) {
+        options.forEach { (value, label) ->
+            val sel = value == selected
+            Box(
+                Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).background(if (sel) C.CardHigh else Color.Transparent)
+                    .clickable(enabled = enabled && !sel) { onSelect(value) }.padding(vertical = 12.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(label, fontSize = 15.sp, fontWeight = if (sel) FontWeight.Medium else FontWeight.Normal, color = if (sel) C.On else C.Sub)
+            }
+        }
+    }
+}
+
+/** Full-width button. Primary is light on dark, secondary is a dark card. */
+@Composable
+fun BigButton(text: String, primary: Boolean = true, busy: Boolean = false, onClick: () -> Unit) {
+    Box(
+        Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(14.dp)).background(if (primary) C.On else C.Card)
+            .clickable(enabled = !busy, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (busy) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = if (primary) C.Bg else C.Sub)
+        else Text(text, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = if (primary) C.Bg else C.On)
+    }
+}
+
+@Composable
+fun SectionLabel(text: String) {
+    Text(text, fontSize = 13.sp, color = C.Sub, modifier = Modifier.padding(top = 24.dp, bottom = 8.dp))
+}
+
+@Composable
+fun RowScope.Spacer1() = Spacer(Modifier.weight(1f))
+
+fun fmt1(d: Double) = if (d % 1.0 == 0.0) d.toInt().toString() else "%.1f".format(d)
 
 fun ago(millis: Long?): String {
-    if (millis == null) return "ukjent"
+    if (millis == null) return ""
     val min = (System.currentTimeMillis() - millis) / 60_000
     return when {
-        min < 1 -> "nå nettopp"
+        min < 1 -> "nå"
         min < 60 -> "$min min siden"
         min < 60 * 24 -> "${min / 60} t siden"
         else -> "${min / (60 * 24)} d siden"
     }
 }
+
+fun hm(minutes: Int) = if (minutes >= 60) "${minutes / 60} t ${minutes % 60} m" else "$minutes min"

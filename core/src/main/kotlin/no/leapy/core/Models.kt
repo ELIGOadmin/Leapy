@@ -60,6 +60,9 @@ data class Tires(val flKpa: Int?, val frKpa: Int?, val rlKpa: Int?, val rrKpa: I
 /** The subset of vehicle status the app shows, parsed from T03-style named fields or C10-style signals. */
 data class CarStatus(
     val soc: Int?,
+    val preciseSoc: Double?,
+    val remainingKwh: Double?,
+    val batteryTempC: Int?,
     val rangeKm: Int?,
     val chargeState: ChargeState,
     val chargeRemainMin: Int?,
@@ -81,6 +84,17 @@ data class CarStatus(
     val passengerSeatHeat: Int?,
     val steeringWheelHeat: Boolean?,
     val sentryMode: Boolean?,
+    val defrostOn: Boolean?,
+    val rapidHeatOn: Boolean?,
+    val mirrorHeatOn: Boolean?,
+    val driving: Boolean,
+    val doorFrontLeftOpen: Boolean,
+    val doorFrontRightOpen: Boolean,
+    val doorRearLeftOpen: Boolean,
+    val doorRearRightOpen: Boolean,
+    val tailgateOpen: Boolean,
+    val windowFrontLeftPct: Int,
+    val windowRearLeftPct: Int,
     val tires: Tires,
     val collectedAtMillis: Long?,
 ) {
@@ -101,6 +115,7 @@ data class CarStatus(
             "2646" to "leftRearTirePressure", "2660" to "rightRearTirePressure",
             "2641" to "leftFrontTirePressureState", "2648" to "rightFrontTirePressureState",
             "2655" to "leftRearTirePressureState", "2662" to "rightRearTirePressureState",
+            "1182" to "minBatteryTemp", "1945" to "windshieldDefrost", "2681" to "rapidHeating", "49" to "leftMirrorHeating", "1258" to "bcmKeyPositionOn3",
             "2100" to "driverSeatHeating", "2118" to "passengerSeatHeating", "1816" to "steeringWheelHeating",
             "3636" to "sentryMode",
         )
@@ -154,6 +169,9 @@ data class CarStatus(
 
             return CarStatus(
                 soc = m["soc"].int,
+                preciseSoc = m["preciseSoc"].dbl ?: m["soc"].dbl,
+                remainingKwh = m["dumpEnergy"].dbl?.let { it / 1000.0 },
+                batteryTempC = m["minBatteryTemp"].int,
                 rangeKm = m["expectedMileage"].int ?: m["liveRemainingRange"].int,
                 chargeState = state,
                 chargeRemainMin = m["chargeRemainTime"].int,
@@ -175,6 +193,17 @@ data class CarStatus(
                 passengerSeatHeat = m["passengerSeatHeating"].int,
                 steeringWheelHeat = m["steeringWheelHeating"].int?.let { it != 0 },
                 sentryMode = m["sentryMode"].int?.let { it != 0 },
+                defrostOn = m["windshieldDefrost"].int?.let { it == 1 || it == 2 },
+                rapidHeatOn = m["rapidHeating"].int?.let { it != 0 },
+                mirrorHeatOn = m["leftMirrorHeating"].int?.let { it != 0 },
+                driving = m["bcmKeyPositionOn3"].int == 1 && m["gearStatus"].int in setOf(1, 3),
+                doorFrontLeftOpen = open("lbcmDriverDoorStatus"),
+                doorFrontRightOpen = open("rbcmDriverDoorStatus"),
+                doorRearLeftOpen = open("lbcmLeftRearDoorStatus"),
+                doorRearRightOpen = open("rbcmRightRearDoorStatus"),
+                tailgateOpen = open("bbcmBackDoorStatus"),
+                windowFrontLeftPct = m["leftFrontWindowPercent"].int ?: 0,
+                windowRearLeftPct = m["leftRearWindowPercent"].int ?: 0,
                 tires = Tires(
                     m["leftFrontTirePressure"].int, m["rightFrontTirePressure"].int,
                     m["leftRearTirePressure"].int, m["rightRearTirePressure"].int,

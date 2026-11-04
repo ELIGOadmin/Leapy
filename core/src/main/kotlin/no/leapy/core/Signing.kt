@@ -36,6 +36,13 @@ class Signer(
         return baseHeaders(nonce, deviceId, ts, Crypto.sha256Hex(input))
     }
 
+    /** Headers for vehicle/v1/carpicture/package, whose signature uses its own field order. */
+    fun picturePackage(signKey: ByteArray, deviceId: String, pictureKey: String): MutableMap<String, String> {
+        val nonce = nonceSource(); val ts = clock().toString()
+        val input = listOf(language, Const.CHANNEL, deviceId, Const.DEVICE_TYPE, pictureKey, nonce, Const.SOURCE, ts, Const.APP_VERSION).joinToString("")
+        return baseHeaders(nonce, deviceId, ts, Crypto.hmacSha256Hex(signKey, input), p12 = false)
+    }
+
     /**
      * HMAC-SHA256 signed headers. The signature input is the values of the standard header
      * fields plus [extra] (vin, body params, ...), concatenated in key order. Every

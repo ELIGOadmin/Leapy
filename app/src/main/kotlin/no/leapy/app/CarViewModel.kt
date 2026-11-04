@@ -35,6 +35,7 @@ data class UiState(
     val error: String? = null,
     val climateTemp: Int = 21,
     val hasPin: Boolean = false,
+    val carImage: CarImagePackage? = null,
 )
 
 class CarViewModel(app: Application) : AndroidViewModel(app) {
@@ -75,6 +76,7 @@ class CarViewModel(app: Application) : AndroidViewModel(app) {
 
     fun logout() {
         store.clear()
+        java.io.File(getApplication<Application>().filesDir, "car").deleteRecursively()
         client = null
         _state.value = UiState()
     }
@@ -89,7 +91,7 @@ class CarViewModel(app: Application) : AndroidViewModel(app) {
 
     fun selectVehicle(v: Vehicle) {
         store.selectedVin = v.vin
-        _state.update { it.copy(vehicle = v, status = null) }
+        _state.update { it.copy(vehicle = v, status = null, carImage = null) }
         refresh()
     }
 
@@ -107,6 +109,7 @@ class CarViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 val v = vehicles.firstOrNull { it.vin == store.selectedVin } ?: vehicles.first()
                 val raw: JsonObject = withContext(Dispatchers.IO) { cl.rawStatus(v) }
+                if (_state.value.carImage == null) loadCarImage(cl, v)
                 store.lastStatusJson = raw.toString()
                 _state.update {
                     it.copy(
@@ -116,6 +119,32 @@ class CarViewModel(app: Application) : AndroidViewModel(app) {
                 }
             } catch (e: Exception) {
                 _state.update { it.copy(refreshing = false, error = if (silent) it.error else friendly(e)) }
+            }
+        }
+    }
+
+    private var carImageLoading = false
+
+    /** Loads Leapmotor's picture of this car, cached on the phone after the first download. */
+    private fun loadCarImage(cl: LeapmotorClient, v: Vehicle) {
+        if (carImageLoading) return
+        carImageLoading = true
+        viewModelScope.launch {
+            try {
+                val pkg = withContext(Dispatchers.IO) {
+                    val dir = java.io.File(getApplication<Application>().filesDir, "car").apply { mkdirs() }
+                    val cached = dir.listFiles()?.firstOrNull { it.name.startsWith(v.vin) }
+                    val bytes = cached?.readBytes() ?: run {
+                        val key = cl.carPictureKey(v) ?: return@withContext null
+                        cl.carPicturePackage(key).also { java.io.File(dir, "${v.vin}.zip").writeBytes(it) }
+                    }
+                    CarImagePackage.fromZip(bytes)
+                }
+                if (pkg != null) _state.update { it.copy(carImage = pkg) }
+            } catch (_: Exception) {
+                // No picture: the home screen simply shows none.
+            } finally {
+                carImageLoading = false
             }
         }
     }
@@ -152,7 +181,7 @@ class CarViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 withContext(Dispatchers.IO) { action(cl, vin) }
-                _state.update { it.copy(busy = null, message = "$label: utført") }
+                _state.update { it.copy(busy = null) }
                 delay(4000)
                 refresh(silent = true)
             } catch (e: Exception) {

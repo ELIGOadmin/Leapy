@@ -1,35 +1,49 @@
 package no.leapy.app.ui
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 
-val Accent = Color(0xFF3DDC97)
-val Warn = Color(0xFFFFB547)
-val Danger = Color(0xFFFF6B6B)
+object C {
+    val Bg = Color(0xFF0B0D11)
+    val Card = Color(0xFF15181E)
+    val CardHigh = Color(0xFF1E222A)
+    val Line = Color(0xFF22262E)
+    val On = Color(0xFFF2F4F7)
+    val Sub = Color(0xFF8B93A1)
+    val Faint = Color(0xFF555C68)
+    val Accent = Color(0xFF3DDC97)
+    val Heat = Color(0xFFFF8A4C)
+    val Warn = Color(0xFFFFB547)
+    val Danger = Color(0xFFFF6B6B)
+}
 
-private val Dark = darkColorScheme(
-    primary = Accent, onPrimary = Color(0xFF00210F),
-    secondary = Color(0xFF7FB7FF), onSecondary = Color(0xFF00213F),
-    background = Color(0xFF0E1420), onBackground = Color(0xFFE6EAF2),
-    surface = Color(0xFF0E1420), onSurface = Color(0xFFE6EAF2),
-    surfaceVariant = Color(0xFF1A2232), onSurfaceVariant = Color(0xFFA7B0C2),
-    surfaceContainer = Color(0xFF161D2B), surfaceContainerHigh = Color(0xFF1C2433),
-    error = Danger,
+private val Scheme = darkColorScheme(
+    primary = C.Accent, onPrimary = Color(0xFF04170E),
+    secondary = C.On, onSecondary = C.Bg,
+    background = C.Bg, onBackground = C.On,
+    surface = C.Bg, onSurface = C.On,
+    surfaceVariant = C.Card, onSurfaceVariant = C.Sub,
+    surfaceContainer = C.Card, surfaceContainerHigh = C.CardHigh, surfaceContainerHighest = C.CardHigh,
+    outline = C.Line, outlineVariant = C.Line,
+    error = C.Danger,
 )
 
-private val Light = lightColorScheme(
-    primary = Color(0xFF00895A), onPrimary = Color.White,
-    secondary = Color(0xFF2F6DB5),
-    background = Color(0xFFF5F7FA), surface = Color(0xFFF5F7FA),
-    surfaceVariant = Color(0xFFE6EAF0), surfaceContainer = Color(0xFFFFFFFF), surfaceContainerHigh = Color(0xFFFFFFFF),
-    error = Color(0xFFC62828),
+private val Type = Typography(
+    headlineLarge = TextStyle(fontSize = 30.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.4).sp),
+    headlineSmall = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.SemiBold),
+    titleMedium = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Medium),
+    bodyLarge = TextStyle(fontSize = 16.sp),
+    bodyMedium = TextStyle(fontSize = 14.sp),
+    labelMedium = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium),
 )
 
 @Composable
 fun LeapyTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = if (isSystemInDarkTheme()) Dark else Light, content = content)
+    MaterialTheme(colorScheme = Scheme, typography = Type, content = content)
 }

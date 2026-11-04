@@ -169,6 +169,31 @@ class LeapmotorClient(
 
     fun status(vehicle: Vehicle): CarStatus = CarStatus.parse(rawStatus(vehicle))
 
+    /** Key of the car picture package (a ZIP of PNG layers in the car's own colour), or null. */
+    @Synchronized
+    fun carPictureKey(vehicle: Vehicle): String? = withAuthRetry { s ->
+        val h = signer.signed(signKey(s), s.deviceId, mapOf("vin" to vehicle.vin, "deviceID" to s.deviceId)).withAuth(s)
+        val body = "deviceID=${Crypto.quote(s.deviceId)}&vin=${Crypto.quote(vehicle.vin)}"
+        parse(post(accountClient(s), "/carownerservice/oversea/vehicle/v1/carpicture/key", h, body), "Bilbilde")["data"].obj?.get("key").str
+    }
+
+    @Synchronized
+    fun carPicturePackage(key: String): ByteArray = withAuthRetry { s ->
+        val h = signer.picturePackage(signKey(s), s.deviceId, key).withAuth(s)
+        val req = Request.Builder().url(baseUrl.trimEnd('/') + "/carownerservice/oversea/vehicle/v1/carpicture/package")
+            .apply { h.forEach { (k, v) -> header(k, v) } }
+            .post("key=${Crypto.quote(key)}".toByteArray(Charsets.UTF_8).toRequestBody("application/x-www-form-urlencoded".toMediaType()))
+            .build()
+        try {
+            accountClient(s).newCall(req).execute().use { r ->
+                if (r.code != 200) throw LeapmotorException("Bilbilde feilet: HTTP ${r.code}")
+                r.body?.bytes() ?: throw LeapmotorException("Bilbilde var tomt")
+            }
+        } catch (e: java.io.IOException) {
+            throw LeapmotorException("Fikk ikke hentet bilbilde: ${e.message}")
+        }
+    }
+
     @Synchronized
     fun shareInvitations(): List<ShareInvitation> = withAuthRetry { s ->
         val h = signer.signed(signKey(s), s.deviceId).withAuth(s)
