@@ -293,9 +293,10 @@ private fun ChargePanel(state: UiState, vm: CarViewModel) {
         if (s?.pluggedIn == true || s?.isCharging == true) {
             val charging = s.isCharging
             val busy = state.busy == Command.CHARGE_START.label || state.busy == Command.CHARGE_STOP.label
+            val locked = state.busy != null && !busy
             Box(
-                Modifier.padding(bottom = 12.dp).clip(RoundedCornerShape(10.dp)).background(C.Card)
-                    .clickable(enabled = !busy) { vm.send(if (charging) Command.CHARGE_STOP else Command.CHARGE_START) }
+                Modifier.padding(bottom = 12.dp).lockedLook(locked).clip(RoundedCornerShape(10.dp)).background(C.Card)
+                    .clickable(enabled = state.busy == null) { vm.send(if (charging) Command.CHARGE_STOP else Command.CHARGE_START) }
                     .padding(horizontal = 14.dp, vertical = 8.dp),
                 contentAlignment = Alignment.Center,
             ) {
@@ -364,9 +365,11 @@ private fun LimitBar(soc: Int, limit: Int?, charging: Boolean, onChange: (Int) -
         change(v)
     }
     val fillColor = if (charging) C.Accent else C.On
+    val locked = LocalCarBusy.current
     Canvas(
-        Modifier.fillMaxWidth().height(40.dp).onSizeChanged { widthPx = it.width.toFloat().coerceAtLeast(1f) }
-            .pointerInput(Unit) {
+        Modifier.fillMaxWidth().height(40.dp).lockedLook(locked).onSizeChanged { widthPx = it.width.toFloat().coerceAtLeast(1f) }
+            .pointerInput(locked) {
+                if (locked) return@pointerInput
                 detectHorizontalDragGestures(
                     onDragStart = { update(valueAt(it.x)) },
                     onDragEnd = { if (last >= 0) commit(last); last = -1 },

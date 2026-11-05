@@ -2,7 +2,7 @@ name: Bygg APK
 
 on:
   push:
-    branches: [main]
+    branches: [main, test]
   workflow_dispatch:
 
 permissions:
@@ -39,5 +39,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="v0.1.${{ github.run_number }}"
-          gh release create "$TAG" leapy.apk --title "Leapy $TAG" --notes "Installer leapy.apk på Android-telefonen."
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            TAG="v0.1.${{ github.run_number }}"
+            gh release create "$TAG" leapy.apk --title "Leapy $TAG" --notes "Installer leapy.apk på Android-telefonen."
+          else
+            # Test builds are pre-releases, so "latest" keeps pointing at the last real version.
+            TAG="test-${{ github.run_number }}"
+            gh release create "$TAG" leapy.apk --prerelease --target "${{ github.sha }}" --title "Leapy testversjon $TAG" --notes "Testversjon. Installer leapy.apk på Android-telefonen."
+          fi

@@ -186,9 +186,10 @@ class CarViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 withContext(Dispatchers.IO) { action(cl, vin) }
+                // Keep the buttons locked until the car reports its new state.
+                delay(3000)
+                runCatching { fetchStatus(cl) }
                 _state.update { it.copy(busy = null) }
-                delay(4000)
-                refresh(silent = true)
             } catch (e: Exception) {
                 _state.update { it.copy(busy = null, error = friendly(e)) }
             }
@@ -198,6 +199,13 @@ class CarViewModel(app: Application) : AndroidViewModel(app) {
     fun setQuickItems(items: List<String>) {
         uiPrefs.edit().putString("quick", items.joinToString(",")).apply()
         _state.update { it.copy(quickItems = items) }
+    }
+
+    private suspend fun fetchStatus(cl: LeapmotorClient) {
+        val v = _state.value.vehicle ?: return
+        val raw: JsonObject = withContext(Dispatchers.IO) { cl.rawStatus(v) }
+        store.lastStatusJson = raw.toString()
+        _state.update { it.copy(status = CarStatus.parse(raw), lastFetchMillis = System.currentTimeMillis()) }
     }
 
     fun clearMessages() = _state.update { it.copy(message = null, error = null) }

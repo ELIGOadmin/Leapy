@@ -32,9 +32,11 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -43,6 +45,12 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+
+/** True while a command is on its way to the car: every other control is locked and dimmed. */
+val LocalCarBusy = compositionLocalOf { false }
+
+/** Dims a control that is locked because another command is running. */
+fun Modifier.lockedLook(locked: Boolean) = if (locked) alpha(0.35f) else this
 
 /** Scrollable detail page with a back arrow and title. */
 @Composable
@@ -73,10 +81,11 @@ fun QuickAction(
 ) {
     val haptic = LocalHapticFeedback.current
     val tint by animateColorAsState(if (active) C.Accent else C.On, label = "tint")
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    val locked = LocalCarBusy.current && !busy
+    Column(Modifier.lockedLook(locked), horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             Modifier.size(56.dp).clip(CircleShape).combinedClickable(
-                enabled = enabled && !busy,
+                enabled = enabled && !busy && !locked,
                 onLongClick = onLongClick?.let { l -> { haptic.performHapticFeedback(HapticFeedbackType.LongPress); l() } },
                 onClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onClick() },
             ),
@@ -114,11 +123,12 @@ fun NavRow(icon: ImageVector, title: String, value: String?, onClick: () -> Unit
 fun SwitchRow(label: String, on: Boolean?, busy: Boolean = false, onChange: (Boolean) -> Unit) {
     Column {
         Box(Modifier.fillMaxWidth().height(1.dp).background(C.Line))
-        Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        val locked = LocalCarBusy.current && !busy
+        Row(Modifier.fillMaxWidth().padding(vertical = 10.dp).lockedLook(locked), verticalAlignment = Alignment.CenterVertically) {
             Text(label, fontSize = 16.sp, color = C.On, modifier = Modifier.weight(1f))
             if (busy) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = C.Sub)
             else Switch(
-                checked = on == true, onCheckedChange = onChange,
+                checked = on == true, onCheckedChange = onChange, enabled = !locked,
                 colors = SwitchDefaults.colors(
                     checkedTrackColor = C.Accent, checkedThumbColor = Color.White,
                     uncheckedTrackColor = C.CardHigh, uncheckedThumbColor = Color(0xFF9AA1AD), uncheckedBorderColor = Color.Transparent,
@@ -133,10 +143,11 @@ fun SwitchRow(label: String, on: Boolean?, busy: Boolean = false, onChange: (Boo
 fun ActionRow(label: String, action: String, busy: Boolean = false, onClick: () -> Unit) {
     Column {
         Box(Modifier.fillMaxWidth().height(1.dp).background(C.Line))
-        Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        val locked = LocalCarBusy.current && !busy
+        Row(Modifier.fillMaxWidth().padding(vertical = 12.dp).lockedLook(locked), verticalAlignment = Alignment.CenterVertically) {
             Text(label, fontSize = 16.sp, color = C.On, modifier = Modifier.weight(1f))
             Box(
-                Modifier.clip(RoundedCornerShape(10.dp)).background(C.CardHigh).clickable(enabled = !busy, onClick = onClick)
+                Modifier.clip(RoundedCornerShape(10.dp)).background(C.CardHigh).clickable(enabled = !busy && !locked, onClick = onClick)
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 contentAlignment = Alignment.Center,
             ) {
@@ -164,12 +175,13 @@ fun StatStrip(vararg stats: Pair<String, String>) {
 /** Segmented choice in a pill. */
 @Composable
 fun <T> Segmented(options: List<Pair<T, String>>, selected: T?, enabled: Boolean = true, onSelect: (T) -> Unit) {
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(C.Card).padding(4.dp)) {
+    val locked = LocalCarBusy.current
+    Row(Modifier.fillMaxWidth().lockedLook(locked).clip(RoundedCornerShape(14.dp)).background(C.Card).padding(4.dp)) {
         options.forEach { (value, label) ->
             val sel = value == selected
             Box(
                 Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).background(if (sel) C.CardHigh else Color.Transparent)
-                    .clickable(enabled = enabled && !sel) { onSelect(value) }.padding(vertical = 12.dp),
+                    .clickable(enabled = enabled && !sel && !locked) { onSelect(value) }.padding(vertical = 12.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(label, fontSize = 15.sp, fontWeight = if (sel) FontWeight.Medium else FontWeight.Normal, color = if (sel) C.On else C.Sub)
@@ -180,10 +192,11 @@ fun <T> Segmented(options: List<Pair<T, String>>, selected: T?, enabled: Boolean
 
 /** Full-width button. Primary is light on dark, secondary is a dark card. */
 @Composable
-fun BigButton(text: String, primary: Boolean = true, busy: Boolean = false, onClick: () -> Unit) {
+fun BigButton(text: String, primary: Boolean = true, busy: Boolean = false, carCommand: Boolean = false, onClick: () -> Unit) {
+    val locked = carCommand && LocalCarBusy.current && !busy
     Box(
-        Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(14.dp)).background(if (primary) C.On else C.Card)
-            .clickable(enabled = !busy, onClick = onClick),
+        Modifier.fillMaxWidth().height(52.dp).lockedLook(locked).clip(RoundedCornerShape(14.dp)).background(if (primary) C.On else C.Card)
+            .clickable(enabled = !busy && !locked, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         if (busy) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = if (primary) C.Bg else C.Sub)
@@ -217,8 +230,9 @@ fun hm(minutes: Int) = if (minutes >= 60) "${minutes / 60} t ${minutes % 60} m" 
 /** Square-ish control tile: icon on top, label and state below. */
 @Composable
 fun Tile(icon: ImageVector, label: String, value: String?, active: Boolean = false, busy: Boolean = false, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val locked = LocalCarBusy.current && !busy
     Column(
-        modifier.clip(RoundedCornerShape(18.dp)).background(C.Card).clickable(enabled = !busy, onClick = onClick).padding(16.dp),
+        modifier.lockedLook(locked).clip(RoundedCornerShape(18.dp)).background(C.Card).clickable(enabled = !busy && !locked, onClick = onClick).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Box(Modifier.size(28.dp), contentAlignment = Alignment.CenterStart) {

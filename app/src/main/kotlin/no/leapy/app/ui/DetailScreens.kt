@@ -87,7 +87,7 @@ fun ClimateScreen(state: UiState, vm: CarViewModel, onBack: () -> Unit) {
         val on = s?.acOn == true
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             Box(
-                Modifier.size(76.dp).clip(CircleShape).background(if (on) C.Accent else C.CardHigh)
+                Modifier.size(76.dp).lockedLook(busy != null && busy?.startsWith("Klima") != true).clip(CircleShape).background(if (on) C.Accent else C.CardHigh)
                     .clickable(enabled = busy == null) {
                         if (on && temp == state.climateTemp) vm.send(Command.AC_OFF)
                         else vm.startClimate(defaultMode(s?.interiorTemp, temp), temp, 4)
@@ -132,7 +132,8 @@ private fun RoundIcon(icon: ImageVector, desc: String, onClick: () -> Unit) {
 private fun HeatTile(icon: ImageVector, label: String, level: Int, max: Int, modifier: Modifier, onSet: (Int) -> Unit) {
     val on = level > 0
     Column(
-        modifier.clip(RoundedCornerShape(18.dp)).background(C.Card).clickable { onSet(if (level >= max) 0 else level + 1) }.padding(vertical = 14.dp),
+        modifier.lockedLook(LocalCarBusy.current).clip(RoundedCornerShape(18.dp)).background(C.Card)
+            .clickable(enabled = !LocalCarBusy.current) { onSet(if (level >= max) 0 else level + 1) }.padding(vertical = 14.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Icon(icon, label, tint = if (on) C.Heat else C.Sub, modifier = Modifier.size(26.dp))

@@ -20,6 +20,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -92,7 +93,7 @@ fun LeapyApp(vm: CarViewModel, biometric: (String, () -> Unit) -> Boolean) {
         when {
             state.vehicle == null && state.invitations.isNotEmpty() -> InvitationScreen(state.invitations, vm::acceptInvitation)
             state.vehicle == null && !state.refreshing && state.status == null -> NoCarScreen(onRetry = { vm.refresh() }, onLogout = vm::logout)
-            else -> AnimatedContent(
+            else -> CompositionLocalProvider(LocalCarBusy provides (state.busy != null)) { AnimatedContent(
                 targetState = page,
                 transitionSpec = {
                     val forward = targetState != Page.HOME
@@ -109,7 +110,7 @@ fun LeapyApp(vm: CarViewModel, biometric: (String, () -> Unit) -> Boolean) {
                     Page.CAR -> CarScreen(state, vm, back)
                     Page.SETTINGS -> SettingsScreen(state, vm, back)
                 }
-            }
+            } }
         }
 
         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(16.dp)) {
