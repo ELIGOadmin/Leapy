@@ -72,7 +72,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
@@ -112,18 +111,6 @@ fun HomeScreen(state: UiState, vm: CarViewModel, confirmer: Confirmer, go: (Page
 
             // Battery and charging
             ChargePanel(state, vm)
-
-            // Temperatures, and how fresh the data is
-            Spacer(Modifier.height(16.dp))
-            StatStrip(
-                (s?.outdoorTemp?.let { "${fmt1(it)}°" } ?: "–") to "Ute",
-                (s?.interiorTemp?.let { "${fmt1(it)}°" } ?: "–") to "Inne",
-                (s?.batteryTempC?.let { "$it°" } ?: "–") to "Batteri",
-            )
-            (s?.collectedAtMillis ?: state.lastFetchMillis)?.let {
-                Text("Bilen rapporterte ${ago(it)}", fontSize = 12.sp, color = C.Faint, textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().padding(top = 6.dp))
-            }
 
             // Quick actions (long-press to rearrange)
             Spacer(Modifier.height(14.dp))
