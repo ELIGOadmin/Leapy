@@ -119,7 +119,7 @@ class CarViewModel(app: Application) : AndroidViewModel(app) {
                 _state.update {
                     it.copy(
                         refreshing = false, vehicles = vehicles, vehicle = v, invitations = emptyList(),
-                        status = CarStatus.parse(raw), lastFetchMillis = System.currentTimeMillis(),
+                        status = withExpected(CarStatus.parse(raw)), lastFetchMillis = System.currentTimeMillis(),
                     )
                 }
             } catch (e: Exception) {
@@ -168,7 +168,7 @@ class CarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun send(cmd: Command) = run(cmd.label) { cl, vin -> cl.send(vin, cmd) }
+    fun send(cmd: Command) = run(cmd.label, expectedAfter(cmd)) { cl, vin -> cl.send(vin, cmd) }
 
     fun startClimate(mode: Command.Companion.ClimateMode, temp: Int, fan: Int) {
         store.lastClimateTemp = temp
@@ -178,7 +178,51 @@ class CarViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setChargeLimit(percent: Int) = run("Ladegrense $percent %") { cl, vin -> cl.setChargeLimit(vin, percent) }
 
-    private fun run(label: String, action: (LeapmotorClient, String) -> Unit) {
+    /**
+     * What the status should look like after a command the car accepted. Leapmotor's cloud often
+     * keeps reporting the old value for a while, so the app shows the expected state until the car
+     * reports the same thing (or a few minutes pass).
+     */
+    private class Expected(val patch: (CarStatus) -> CarStatus, val until: Long)
+    private val expected = mutableListOf<Expected>()
+
+    private fun withExpected(s: CarStatus): CarStatus = synchronized(expected) {
+        val now = System.currentTimeMillis()
+        expected.removeAll { it.until < now || it.patch(s) == s }
+        expected.fold(s) { acc, e -> e.patch(acc) }
+    }
+
+    private fun expectedAfter(cmd: Command): ((CarStatus) -> CarStatus)? = when {
+        cmd == Command.LOCK -> { s: CarStatus -> s.copy(locked = true) }
+        cmd == Command.UNLOCK -> { s: CarStatus -> s.copy(locked = false) }
+        cmd == Command.TRUNK_OPEN -> { s: CarStatus -> s.copy(tailgateOpen = true) }
+        cmd == Command.TRUNK_CLOSE -> { s: CarStatus -> s.copy(tailgateOpen = false) }
+        cmd == Command.SENTRY_ON -> { s: CarStatus -> s.copy(sentryMode = true) }
+        cmd == Command.SENTRY_OFF -> { s: CarStatus -> s.copy(sentryMode = false) }
+        cmd == Command.STEERING_HEAT_ON -> { s: CarStatus -> s.copy(steeringWheelHeat = true) }
+        cmd == Command.STEERING_HEAT_OFF -> { s: CarStatus -> s.copy(steeringWheelHeat = false) }
+        cmd == Command.MIRROR_HEAT_ON -> { s: CarStatus -> s.copy(mirrorHeatOn = true) }
+        cmd == Command.MIRROR_HEAT_OFF -> { s: CarStatus -> s.copy(mirrorHeatOn = false) }
+        cmd == Command.DEFROST -> { s: CarStatus -> s.copy(defrostOn = true, acOn = true) }
+        cmd == Command.QUICK_HEAT -> { s: CarStatus -> s.copy(rapidHeatOn = true, acOn = true) }
+        cmd == Command.QUICK_COOL -> { s: CarStatus -> s.copy(acOn = true) }
+        cmd == Command.AC_OFF -> { s: CarStatus -> s.copy(acOn = false, defrostOn = false, rapidHeatOn = false) }
+        cmd.cmdId == "170" -> { s: CarStatus -> s.copy(acOn = true) }
+        cmd.cmdId == "301" -> {
+            // Content is {"value":"<position>,<level>"}: 1 = driver, 2 = passenger.
+            val v = Regex("\"(\\d+),(\\d+)\"").find(cmd.content)?.groupValues
+            val pos = v?.get(1)?.toIntOrNull(); val level = v?.get(2)?.toIntOrNull()
+            when {
+                level == null -> null
+                pos == 1 -> { s: CarStatus -> s.copy(driverSeatHeat = level) }
+                pos == 2 -> { s: CarStatus -> s.copy(passengerSeatHeat = level) }
+                else -> null
+            }
+        }
+        else -> null
+    }
+
+    private fun run(label: String, expect: ((CarStatus) -> CarStatus)? = null, action: (LeapmotorClient, String) -> Unit) {
         val cl = client ?: return
         val vin = _state.value.vehicle?.vin ?: return
         if (_state.value.busy != null) return
@@ -186,6 +230,11 @@ class CarViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 withContext(Dispatchers.IO) { action(cl, vin) }
+                // The car accepted it: show the new state right away.
+                if (expect != null) {
+                    synchronized(expected) { expected += Expected(expect, System.currentTimeMillis() + 5 * 60_000) }
+                    _state.update { st -> st.copy(status = st.status?.let(expect)) }
+                }
                 // Keep the buttons locked until the car reports its new state.
                 delay(3000)
                 runCatching { fetchStatus(cl) }
@@ -205,7 +254,7 @@ class CarViewModel(app: Application) : AndroidViewModel(app) {
         val v = _state.value.vehicle ?: return
         val raw: JsonObject = withContext(Dispatchers.IO) { cl.rawStatus(v) }
         store.lastStatusJson = raw.toString()
-        _state.update { it.copy(status = CarStatus.parse(raw), lastFetchMillis = System.currentTimeMillis()) }
+        _state.update { it.copy(status = withExpected(CarStatus.parse(raw)), lastFetchMillis = System.currentTimeMillis()) }
     }
 
     fun clearMessages() = _state.update { it.copy(message = null, error = null) }

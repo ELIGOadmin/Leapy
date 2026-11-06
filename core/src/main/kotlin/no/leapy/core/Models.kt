@@ -194,7 +194,7 @@ data class CarStatus(
                 steeringWheelHeat = m["steeringWheelHeating"].int?.let { it != 0 },
                 sentryMode = m["sentryMode"].int?.let { it != 0 },
                 defrostOn = m["windshieldDefrost"].int?.let { it == 1 || it == 2 },
-                rapidHeatOn = m["rapidHeating"].int?.let { it != 0 },
+                rapidHeatOn = m["rapidHeating"].int?.let { it == 2 },
                 mirrorHeatOn = m["leftMirrorHeating"].int?.let { it != 0 },
                 driving = m["bcmKeyPositionOn3"].int == 1 && m["gearStatus"].int in setOf(1, 3),
                 doorFrontLeftOpen = open("lbcmDriverDoorStatus"),
