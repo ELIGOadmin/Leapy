@@ -55,9 +55,9 @@ import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
 
 /** Everything that can sit in the quick-action row on the home screen. */
-enum class QuickItem(val title: String) {
-    LOCK("Lås"), CLIMATE("Klima"), TAILGATE("Bakluke"), CHARGE_PORT("Ladekabel"), FIND("Finn bilen"),
-    SENTRY("Vaktmodus"), PREHEAT("Forvarm batteri"), CHARGE("Lading"), WINDOWS("Vinduer"), SUNSHADE("Solskjerm");
+enum class QuickItem(val title: String, val short: String = title) {
+    LOCK("Lås"), CLIMATE("Klima"), TAILGATE("Bakluke"), CHARGE_PORT("Ladekabel"), FIND("Finn bilen", "Finn"),
+    SENTRY("Vaktmodus"), PREHEAT("Forvarm batteri", "Forvarm"), CHARGE("Lading"), WINDOWS("Vinduer"), SUNSHADE("Solskjerm");
 
     companion object {
         const val SLOTS = 5
@@ -147,7 +147,7 @@ fun QuickBar(
                                 .dragSource(item, i) { slots[i] },
                         ) {
                             QuickAction(
-                                sp.icon, sp.description, active = sp.active, busy = sp.busy, caption = sp.caption,
+                                sp.icon, sp.description, active = sp.active, busy = sp.busy, caption = sp.caption ?: item.short,
                                 enabled = !editing, onLongClick = { onEditingChange(true) }, onClick = sp.onClick,
                             )
                         }

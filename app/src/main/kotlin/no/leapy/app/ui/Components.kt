@@ -94,7 +94,10 @@ fun QuickAction(
             if (busy) CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp, color = C.Sub)
             else Icon(icon, contentDescription = description, tint = tint, modifier = Modifier.size(27.dp))
         }
-        Text(caption ?: "", fontSize = 11.sp, color = if (active) C.Accent else C.Sub, maxLines = 1, modifier = Modifier.height(15.dp))
+        Text(
+            caption ?: "", fontSize = 11.5.sp, fontWeight = FontWeight.Medium, color = if (active) C.Accent else C.On.copy(alpha = 0.85f),
+            maxLines = 1, softWrap = false, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.width(64.dp).height(17.dp),
+        )
     }
 }
 
@@ -253,6 +256,15 @@ fun TileRow(content: @Composable RowScope.() -> Unit) {
 }
 
 private val stampFormat = java.text.SimpleDateFormat("dd.MM.yyyy HH:mm:ss", java.util.Locale("nb", "NO"))
+
+private val timeFormat = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale("nb", "NO"))
+
+/** "15:27:05" for today, otherwise the full date and time. */
+fun stampShort(millis: Long?): String {
+    if (millis == null) return "–"
+    val today = android.text.format.DateUtils.isToday(millis)
+    return if (today) synchronized(timeFormat) { timeFormat.format(java.util.Date(millis)) } else stamp(millis)
+}
 
 /** Full date and time with seconds, e.g. 04.11.2026 21:03:51. */
 fun stamp(millis: Long?): String = millis?.let { synchronized(stampFormat) { stampFormat.format(java.util.Date(it)) } } ?: "–"

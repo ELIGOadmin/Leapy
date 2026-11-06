@@ -101,6 +101,9 @@ fun HomeScreen(state: UiState, vm: CarViewModel, confirmer: Confirmer, go: (Page
                         s?.soc?.let { soc -> BatteryGlyph(soc, s.isCharging); Spacer(Modifier.width(10.dp)) }
                         Text(headline(s), fontSize = 14.sp, color = C.Sub)
                     }
+                    (s?.collectedAtMillis ?: state.lastFetchMillis)?.let {
+                        Text("Oppdatert ${stampShort(it)}", fontSize = 12.sp, color = C.Faint, modifier = Modifier.padding(top = 4.dp))
+                    }
                 }
                 Box(Modifier.size(44.dp).clip(CircleShape).clickable { go(Page.SETTINGS) }, contentAlignment = Alignment.Center) {
                     Icon(Icons.Outlined.Settings, "Innstillinger", tint = C.Sub)
