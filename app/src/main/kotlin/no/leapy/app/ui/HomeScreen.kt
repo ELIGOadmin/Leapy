@@ -6,6 +6,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.material.icons.outlined.BatteryChargingFull
 import androidx.compose.material.icons.outlined.Videocam
+import androidx.compose.material.icons.outlined.WbSunny
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -164,6 +165,13 @@ private fun quickSpec(item: QuickItem, state: UiState, vm: CarViewModel, confirm
             val charging = s?.isCharging == true
             QuickSpec(Icons.Outlined.BatteryChargingFull, if (charging) "Stopp lading" else "Start lading", active = charging,
                 busy = busyWith(Command.CHARGE_START, Command.CHARGE_STOP)) { vm.send(if (charging) Command.CHARGE_STOP else Command.CHARGE_START) }
+        }
+        QuickItem.SUNSHADE -> {
+            val open = (s?.sunshadePct ?: 0) > 0
+            QuickSpec(Icons.Outlined.WbSunny, if (open) "Lukk solskjerm" else "Åpne solskjerm", active = s?.sunshadePct == 0,
+                busy = busyWith(Command.SUNSHADE_OPEN, Command.SUNSHADE_CLOSE),
+                caption = when { s?.sunshadePct == null -> null; open -> "Åpen"; else -> "Lukket" },
+            ) { vm.send(if (open) Command.SUNSHADE_CLOSE else Command.SUNSHADE_OPEN) }
         }
         QuickItem.WINDOWS -> {
             val open = s?.windowsOpen?.isNotEmpty() == true

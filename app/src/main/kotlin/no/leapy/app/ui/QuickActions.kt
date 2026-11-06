@@ -57,7 +57,7 @@ import kotlin.math.roundToInt
 /** Everything that can sit in the quick-action row on the home screen. */
 enum class QuickItem(val title: String) {
     LOCK("Lås"), CLIMATE("Klima"), TAILGATE("Bakluke"), CHARGE_PORT("Ladekabel"), FIND("Finn bilen"),
-    SENTRY("Vaktmodus"), PREHEAT("Forvarm batteri"), CHARGE("Lading"), WINDOWS("Vinduer");
+    SENTRY("Vaktmodus"), PREHEAT("Forvarm batteri"), CHARGE("Lading"), WINDOWS("Vinduer"), SUNSHADE("Solskjerm");
 
     companion object {
         const val SLOTS = 5

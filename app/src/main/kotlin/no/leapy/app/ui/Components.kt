@@ -94,7 +94,7 @@ fun QuickAction(
             if (busy) CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp, color = C.Sub)
             else Icon(icon, contentDescription = description, tint = tint, modifier = Modifier.size(27.dp))
         }
-        Text(caption ?: "", fontSize = 11.sp, color = C.Sub, maxLines = 1, modifier = Modifier.height(15.dp))
+        Text(caption ?: "", fontSize = 11.sp, color = if (active) C.Accent else C.Sub, maxLines = 1, modifier = Modifier.height(15.dp))
     }
 }
 

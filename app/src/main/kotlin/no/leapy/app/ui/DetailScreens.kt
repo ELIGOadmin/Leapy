@@ -212,9 +212,15 @@ fun SecurityScreen(state: UiState, vm: CarViewModel, confirmer: Confirmer, onBac
                 if (s?.tailgateOpen == true) vm.send(Command.TRUNK_CLOSE) else confirmer.confirm(Command.TRUNK_OPEN.label) { vm.send(Command.TRUNK_OPEN) }
             }
         }
+        val shadeOpen = (s?.sunshadePct ?: 0) > 0
         TileRow {
-            Tile(Icons.Outlined.WbSunny, "Solskjerm", "Åpne", busy = busyWith(Command.SUNSHADE_OPEN), modifier = Modifier.weight(1f)) { vm.send(Command.SUNSHADE_OPEN) }
-            Tile(Icons.Outlined.WbSunny, "Solskjerm", "Lukk", busy = busyWith(Command.SUNSHADE_CLOSE), modifier = Modifier.weight(1f)) { vm.send(Command.SUNSHADE_CLOSE) }
+            Tile(Icons.Outlined.WbSunny, "Solskjerm",
+                when { busyWith(Command.SUNSHADE_OPEN) -> "Åpner …"; busyWith(Command.SUNSHADE_CLOSE) -> "Lukker …"
+                       s?.sunshadePct == null -> null; shadeOpen -> "Åpen"; else -> "Lukket" },
+                active = s?.sunshadePct == 0, busy = busyWith(Command.SUNSHADE_OPEN, Command.SUNSHADE_CLOSE), modifier = Modifier.weight(1f)) {
+                vm.send(if (shadeOpen) Command.SUNSHADE_CLOSE else Command.SUNSHADE_OPEN)
+            }
+            Spacer(Modifier.weight(1f))
         }
 
         SectionLabel("Status")

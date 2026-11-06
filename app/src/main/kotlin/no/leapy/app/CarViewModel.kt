@@ -238,6 +238,16 @@ class CarViewModel(app: Application) : AndroidViewModel(app) {
                 // Keep the buttons locked until the car reports its new state.
                 delay(3000)
                 runCatching { fetchStatus(cl) }
+                // The sunshade takes a while to move: keep the spinner until the car reports it has stopped there.
+                if (label == Command.SUNSHADE_OPEN.label || label == Command.SUNSHADE_CLOSE.label) {
+                    val wantOpen = label == Command.SUNSHADE_OPEN.label
+                    repeat(8) {
+                        val pct = _state.value.status?.sunshadePct
+                        if (pct != null && (pct > 0) == wantOpen) return@repeat
+                        delay(2500)
+                        runCatching { fetchStatus(cl) }
+                    }
+                }
                 _state.update { it.copy(busy = null) }
             } catch (e: Exception) {
                 _state.update { it.copy(busy = null, error = friendly(e)) }

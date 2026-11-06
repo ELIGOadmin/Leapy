@@ -95,6 +95,8 @@ data class CarStatus(
     val tailgateOpen: Boolean,
     val windowFrontLeftPct: Int,
     val windowRearLeftPct: Int,
+    /** How far the sunshade is open; 0 = closed, null = not reported. */
+    val sunshadePct: Int? = null,
     val tires: Tires,
     val collectedAtMillis: Long?,
 ) {
@@ -117,7 +119,7 @@ data class CarStatus(
             "2655" to "leftRearTirePressureState", "2662" to "rightRearTirePressureState",
             "1182" to "minBatteryTemp", "1945" to "windshieldDefrost", "2681" to "rapidHeating", "49" to "leftMirrorHeating", "1258" to "bcmKeyPositionOn3",
             "2100" to "driverSeatHeating", "2118" to "passengerSeatHeating", "1816" to "steeringWheelHeating",
-            "3636" to "sentryMode",
+            "3636" to "sentryMode", "1724" to "sunshadeSignal",
         )
 
         fun parse(data: JsonObject): CarStatus {
@@ -204,6 +206,7 @@ data class CarStatus(
                 tailgateOpen = open("bbcmBackDoorStatus"),
                 windowFrontLeftPct = m["leftFrontWindowPercent"].int ?: 0,
                 windowRearLeftPct = m["leftRearWindowPercent"].int ?: 0,
+                sunshadePct = m["sunShade"].int ?: m["sunshadeSignal"].int,
                 tires = Tires(
                     m["leftFrontTirePressure"].int, m["rightFrontTirePressure"].int,
                     m["leftRearTirePressure"].int, m["rightRearTirePressure"].int,
